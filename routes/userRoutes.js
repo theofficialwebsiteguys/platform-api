@@ -25,17 +25,9 @@ router.get('/validate-session', (req, res) => {
 router.get('/', userController.getAllUsers)
 router.get('/id/:id', userController.getUserById)
 router.get('/email', userController.getUserByEmail)
-router.get('/phone', userController.getUserByPhone)
 router.delete('/delete/:id', userController.deleteUser)
-router.put('/add-points', userController.addPoints)
-router.put('/redeem-points', userController.redeemPoints)
 router.post('/logout', userController.logout)
-router.put('/toggle-notifications', userController.toggleNotifications)
 router.put('/update', userController.updateUser)
-router.post('/update-push-token', userController.updateUserPushToken)
-router.post('/push-token', userController.getUserPushToken)
-router.put('/user-membership/upgrade', userController.upgradeUserMembership)
-router.put('/user-membership/downgrade', userController.downgradeUserMembership)
 
 
 module.exports = router

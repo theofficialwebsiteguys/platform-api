@@ -1,7 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db'); // Replace with your Sequelize instance
 const User = require('./user'); // Replace with your User model
-const Business = require('./business'); // Replace with your Business model
 
 const Session = sequelize.define('Sessions', {
     sessionId: {
@@ -18,16 +17,6 @@ const Session = sequelize.define('Sessions', {
         allowNull: false,
         references: {
             model: User,
-            key: 'id',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-    },
-    businessProfileKey: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Business,
             key: 'id',
         },
         onUpdate: 'CASCADE',

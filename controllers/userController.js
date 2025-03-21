@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const { validationResult, body } = require('express-validator');
-const { User, Session, Business } = require('../models');
+const { User, Session } = require('../models');
 const { Op, ValidationError } = require('sequelize');
 require('dotenv').config();
 
@@ -22,18 +22,16 @@ const { now } = require('sequelize/lib/utils');
 exports.login = [
   body('email').isEmail().withMessage('Invalid email format'),
   body('password').notEmpty().withMessage('Password is required'),
-  body('businessId').notEmpty().withMessage('businessId is required'),
-  body('businessName').notEmpty().withMessage('businessName is required'),
 
   async (req, res, next) => {
     // Validate request body
-    const { email, password, businessId, businessName } = req.body;
+    const { email, password } = req.body;
 
     try {
         const errors = validationResult(req);
 
         if (!errors.isEmpty()) {
-          throw new AppError('Validation Error', 400, { field: 'errors', issue: 'Validation Errors Occurred' });
+          throw new AppError('Validation Error', 400, { field: 'errors', issue: 'Validation Errors Occurred', errors });
         }
 
       // Find user by email
@@ -48,19 +46,10 @@ exports.login = [
         throw new AppError('Unauthenticated request', 400, { field: 'businessProfile', issue: 'Incorrect Email or Password' });
       }
 
-      // Verify user's business profile
-      const businessProfile = await Business.findOne({
-        where: { id: businessId, name: businessName },
-      });
-      if (!businessProfile) {
-        throw new AppError('Not Found', 404, { field: 'businessProfile', issue: 'No Matching Business Profile' });
-      }
-
       // Check for an existing session
       const existingSession = await Session.findOne({
         where: {
           userId: user.id,
-          businessProfileKey: businessId,
           expiresAt: { [Op.gt]: new Date() }, // Only find sessions that haven't expired
         },
       });
@@ -88,7 +77,6 @@ exports.login = [
         sessionId,
         sessionToken,
         userId: user.id,
-        businessProfileKey: businessId,
         createdAt: new Date(),
         expiresAt,
       });
@@ -200,64 +188,16 @@ exports.getUserByPhone = async (req, res, next) => {
 
 exports.registerUser = async (req, res, next) => {
   try {
-    let { fname, lname, email, dob, country, phone, password, points, business_id } = req.body
-    let referred_by = null
-    let referral_obj = null
+    let { fname, lname, email, password } = req.body
     let pw = await dt.hashUserPassword(password)
 
-    await dt.findReferralByEmail(email)
-      .then(referral => {
-        if (referral) {
-          referral_obj = referral
-          referred_by = referral.dataValues.referrer_id
-        }
-      })
-
-    await dt.findReferralByPhone(phone)
-      .then(referral => {
-        if (referral) {
-          referral_obj = referral
-          referred_by = referral.dataValues.referrer_id
-        }
-      })
-
-    const newUser = await User.create({ fname, lname, email, dob, country, phone, password: pw, points, business_id, referred_by })
-
-    // handle the flow for updates if there is a referral
-    if (referral_obj) {
-      await dt.incrementUserPoints(newUser.dataValues.id, 200)
-      await dt.incrementUserPoints(referred_by, 200)
-      await referral_obj.update(
-        { referral_converted: true },
-        { where: { id: referral_obj.dataValues.id } }
-      )
-    }
-    
-    // Fire and forget external API call
-    axios.post('https://api.dispenseapp.com/2023-03/auth/register', {
-      email,
-      password
-    }, {
-      headers: {
-        'x-dispense-api-key': process.env.FLOWER_POWER_API_KEY,
-      },
-    }).then(response => {
-      newUser.alpineToken = response.data.token; // Update the push token
-      newUser.save();
-      console.log('External API Response:', response.data);
-    }).catch(apiError => {
-      console.error('Error calling external API:', apiError.response ? apiError.response.data : apiError.message);
-    });
+    const newUser = await User.create({ fname, lname, email, password: pw })
 
     const responseUser = {
       id: newUser.id,
       fname: newUser.fname,
       lname: newUser.lname,
       email: newUser.email,
-      dob: newUser.dob,
-      country: newUser.country,
-      phone: newUser.phone,
-      points: newUser.points,
       createdAt: newUser.createdAt,
     };
 

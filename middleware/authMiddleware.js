@@ -1,4 +1,4 @@
-const { Session, Business, User } = require('../models'); 
+const { Session, User } = require('../models'); 
 const { Op } = require('sequelize');
 const AppError = require('../toolbox/appErrorClass')
 
